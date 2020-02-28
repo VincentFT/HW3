@@ -22,13 +22,13 @@ namespace MySpaceGame
         const int numOfStars = 30;
         const int numOfAsteroids = 20;
         const int numOfSmallStars = 100;
-        const int numOfMedkit = 3;
+        const int numOfPowerUp = 3;
         //Скорости объектов
         const int smallStarSpeed = 5;
         const int starSpeed = 1;
         const int galaxiesSpeed = 6;
         const int asteroidSpeed = 10;
-        const int medkitSpeed = 8;
+        const int powerUpSpeed = 8;
         const int laserSpeed = 15;
         //Размеры объектов
         const int maxSize = 30;
@@ -37,8 +37,8 @@ namespace MySpaceGame
         const int starMinSize = minSize / 2;
         const int galaxiesMaxSize = maxSize * 8;
         const int galaxiesMinSize = minSize * 5;
-        const int MedkitMinSize = 15;
-        const int MedkitMaxSize = 30;
+        const int powerUpMinSize = 15;
+        const int powerUpMaxSize = 30;
         const int shipWidth = 60;
         const int shipHeight = 30;
         //Ограничения объектов
@@ -63,7 +63,7 @@ namespace MySpaceGame
 
                 _asteroids = new Asteroid[numOfAsteroids];
 
-                _powerup = new PowerUp[numOfMedkit];
+                _powerup = new PowerUp[numOfPowerUp];
 
                 for (int i = 0; i < _objs.Length - numOfStars - numOfGalaxies; i++)
                 {
@@ -110,12 +110,12 @@ namespace MySpaceGame
 
                 }
 
-                for (int i = 0; i < numOfMedkit; i++)
+                for (int i = 0; i < numOfPowerUp; i++)
                 {
-                    int size = myRandom.RandomIntNumber(MedkitMinSize, MedkitMaxSize);
+                    int size = myRandom.RandomIntNumber(powerUpMinSize, powerUpMaxSize);
                     int widthPosition = Width;
                     int heightPosition = Convert.ToInt32(myRandom.RandomDoubleNumber() * (double)Game.Height);
-                    int speed = myRandom.RandomIntNumber(-medkitSpeed, -1);
+                    int speed = myRandom.RandomIntNumber(-powerUpSpeed, -1);
 
                     _powerup[i] = new PowerUp(new Point(widthPosition, heightPosition),
                                 new Point(speed, 0), new Size(size, size));
