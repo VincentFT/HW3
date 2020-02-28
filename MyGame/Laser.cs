@@ -33,7 +33,7 @@ namespace MySpaceGame
         {
             if (Pos.X > Game.Width)
             {
-                bulletOutOfScreen?.Invoke($"{DateTime.Now}: Лазер вылетел за пределы экрана");
+                bulletOutOfScreen?.Invoke($"{DateTime.Now}: Лазер вылетел за пределы экрана!");
                 return true;
             }
             else
