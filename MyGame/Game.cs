@@ -3,6 +3,7 @@ using System.Windows.Forms;
 using System.Drawing;
 using System.Diagnostics;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace MySpaceGame
 {
@@ -12,7 +13,7 @@ namespace MySpaceGame
         public static BufferedGraphics Buffer;
         public static BaseObject[] _objs;
         private static List<Bullet> _bullet = new List<Bullet>();
-        private static Asteroid[] _asteroids;
+        private static List<Asteroid> _asteroids = new List<Asteroid>();
         private static Ship _ship;
         private static PowerUp[] _powerup;
         private static int score = 0;
@@ -52,7 +53,29 @@ namespace MySpaceGame
         static Game()
         {
         }
-                
+
+        public static void LogsOn()
+        {
+            Asteroid.asteroidCreation += Logging.Log;
+            Asteroid.asteroidRecreation += Logging.Log;
+            Ship.shipDie += Logging.Log;
+            Ship.shipEnergyLow += Logging.Log;
+            Ship.shipEnergyHigh += Logging.Log;
+            Bullet.bulletOutOfScreen += Logging.Log;
+            Bullet.bulletDestroed += Logging.Log;
+        }
+
+        public static void LogsOff()
+        {
+            Asteroid.asteroidCreation -= Logging.Log;
+            Asteroid.asteroidRecreation -= Logging.Log;
+            Ship.shipDie -= Logging.Log;
+            Ship.shipEnergyLow -= Logging.Log;
+            Ship.shipEnergyHigh -= Logging.Log;
+            Bullet.bulletOutOfScreen -= Logging.Log;
+            Bullet.bulletDestroed -= Logging.Log;
+        }
+
         public static void Load()
         {
             try
@@ -60,9 +83,7 @@ namespace MySpaceGame
                 _objs = new BaseObject[numOfStars + numOfGalaxies + numOfSmallStars];
                                 
                 _ship = new Ship(new Point(5, 400), new Point(5, 5), new Size(shipWidth, shipHeight));
-
-                _asteroids = new Asteroid[numOfAsteroids];
-
+                              
                 _powerup = new PowerUp[numOfPowerUp];
 
                 for (int i = 0; i < _objs.Length - numOfStars - numOfGalaxies; i++)
@@ -128,28 +149,9 @@ namespace MySpaceGame
                         throw new GameObjectException($"Объект {typeof(Galaxies)} стоит на месте", 0);
 
                 }
-
-                for (int i = 0; i < _asteroids.Length; i++)
-                {
-                    int size = myRandom.RandomIntNumber(minSize, maxSize);
-                    int widthPosition = Convert.ToInt32(myRandom.RandomDoubleNumber() * (double)(Game.Width - size));
-                    int heightPosition = Convert.ToInt32(myRandom.RandomDoubleNumber() * (double)Game.Height - size);
-                    int speed1 = myRandom.RandomIntNumber(-asteroidSpeed, asteroidSpeed);
-                    int speed2 = myRandom.RandomIntNumber(-asteroidSpeed, asteroidSpeed);
-
-                    _asteroids[i] = new Asteroid(new Point(widthPosition, heightPosition),
-                                    new Point(speed1, speed2), new Size(size, size));
-
-                    if (size < 0)
-                        throw new GameObjectException($"Размер объекта {typeof(Asteroid)} меньше нуля", -1);
-                    if (widthPosition < 0 || widthPosition > Game.Width || heightPosition < 0 || heightPosition > Game.Height)
-                        throw new GameObjectException($"Объект {typeof(Asteroid)} появился за пределами экрана", 2);
-                    if (speed1 == 0 && speed2 == 0)
-                        throw new GameObjectException($"Объект {typeof(Asteroid)} стоит на месте", 0);
-                    if (Math.Abs(speed1) > speedLimit || Math.Abs(speed2) > speedLimit)
-                        throw new GameObjectException($"Объект {typeof(Asteroid)} двигается со слишком большой скоростью", 1);
-
-                }
+                               
+                recreateAsteroids();
+                                
             }
             catch (GameObjectException ex)
             {
@@ -247,31 +249,38 @@ namespace MySpaceGame
         {
             foreach (BaseObject obj in _objs) obj.Update();
             foreach (Bullet bul in _bullet) bul?.Update();
-            foreach (PowerUp pow in _powerup) pow?.Update();
+            foreach (PowerUp med in _powerup) med?.Update();
 
-            for (var i = 0; i < _asteroids.Length; i++)
+            for (var i = 0; i < _asteroids.Count; i++)
             {
                 if (_asteroids[i] == null) continue;
                 _asteroids[i].Update();
                 for (var j = 0; j < _bullet.Count; j++)
                 {
-                    if (_bullet[j]?.Collision(_asteroids[i]) ?? false)
+                    if (_bullet[j] != null && _asteroids[i] != null && _bullet[j].Collision(_asteroids[i]))
                     {
-                        System.Media.SystemSounds.Beep.Play();
-                        _asteroids[i].Recreate();
+                        System.Media.SystemSounds.Hand.Play();
                         _bullet[j].Destroed();
-                        _bullet.RemoveAt(j);
+                        _bullet[j] = null;
                         score += _asteroids[i].Power;
+                        _asteroids[i].Destroed();
+                        _asteroids[i] = null;
+                        if (checkAsteroidsExist())
+                            recreateAsteroids();
                         continue;
                     }
 
-                    if (_bullet[j].OutOfScreen())
-                        _bullet.RemoveAt(j);
+                    if (_bullet[j] != null && _bullet[j].OutOfScreen())
+                        _bullet[j] = null;
                 }
 
-                if (_ship.Collision(_asteroids[i])) {
-                    _asteroids[i].Recreate();
+                if (_asteroids[i] != null && _ship.Collision(_asteroids[i]))
+                {
                     _ship?.EnergyLow(_asteroids[i].Power);
+                    _asteroids[i].Destroed();
+                    _asteroids[i] = null;
+                    if (checkAsteroidsExist())
+                        recreateAsteroids();
                     System.Media.SystemSounds.Asterisk.Play();
                     if (_ship.Energy <= 0) _ship?.Die();
                 };
@@ -287,7 +296,46 @@ namespace MySpaceGame
                 };
             }
         }
-                
+
+        /// <summary>Проверка на оставшиеся астероиды</summary>
+        /// <returns></returns>
+        private static bool checkAsteroidsExist()
+        {
+            return _asteroids.Distinct().Count() == 1;
+        }
+
+        /// <summary>Метод создания астероидов на 1 больше</summary>
+        private static void recreateAsteroids()
+        {
+            for (int i = 0; i < Asteroid.numbers; i++)
+            {
+                int size = myRandom.RandomIntNumber(minSize, maxSize);
+                int widthPosition = Math.Abs(Convert.ToInt32(myRandom.RandomDoubleNumber() * (double)(Game.Width - size)));
+                int heightPosition = Math.Abs(Convert.ToInt32(myRandom.RandomDoubleNumber() * (double)(Game.Height - size)));
+                int speed1 = myRandom.RandomIntNumber(-asteroidSpeed, asteroidSpeed);
+                int speed2 = myRandom.RandomIntNumber(-asteroidSpeed, asteroidSpeed);
+
+                _asteroids.Add(
+                               new Asteroid(
+                                   new Point(widthPosition, heightPosition),
+                                   new Point(speed1, speed2),
+                                   new Size(size, size)
+                                   )
+                               );
+
+                if (size < 0)
+                    throw new GameObjectException($"Размер объекта {typeof(Asteroid)} меньше нуля", -1);
+                if (widthPosition < 0 || widthPosition > Game.Width || heightPosition < 0 || heightPosition > Game.Height)
+                    throw new GameObjectException($"Объект {typeof(Asteroid)} появился за пределами экрана", 2);
+                if (speed1 == 0 && speed2 == 0)
+                    throw new GameObjectException($"Объект {typeof(Asteroid)} стоит на месте", 0);
+                if (Math.Abs(speed1) > speedLimit || Math.Abs(speed2) > speedLimit)
+                    throw new GameObjectException($"Объект {typeof(Asteroid)} двигается со слишком большой скоростью", 1);
+
+            }
+            Asteroid.numbers++;
+        }
+
         public static void Finish()
         {
             Closed();
