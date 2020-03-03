@@ -12,6 +12,8 @@ namespace MySpaceGame
         Bitmap image = new Bitmap("..\\..\\img/asteroid.png");
         public int Power { get; set; } = 3;
 
+        public static int numbers { get; set; } = 2;
+
         public static event Action<string> asteroidCreation;
         public static event Action<string> asteroidRecreation;
                 
@@ -48,7 +50,7 @@ namespace MySpaceGame
             if (Pos.Y > Game.Height - Size.Height) Dir.Y = -Dir.Y;
         }
                 
-        public void Recreate()
+        public void Destroed()
         {
             Pos.X = myRandom.RandomIntNumber(Game.Width / 2, Game.Width - Size.Width);
             Pos.Y = Convert.ToInt32(myRandom.RandomDoubleNumber() * (double)(Game.Height - Size.Height));
